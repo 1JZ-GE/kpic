@@ -48,6 +48,7 @@ PlasmoidItem {
     }
 
     fullRepresentation: PopupView {
+        kpicClient: client
         initialUrls: root.pendingDrops
         onDropsConsumed: root.pendingDrops = []
         onCompressRequested: (uris, quality, lossless, format) => {

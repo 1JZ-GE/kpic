@@ -9,7 +9,20 @@ Item {
     property int quality: 80
     property bool lossless: false
     property string format: ""
+    // live job state, fed by the client via popup view
+    property bool busy: false
+    property int progressIndex: 0
+    property int progressDone: 0
+    property int progressTotal: 0
     signal compressRequested
+
+    onBusyChanged: {
+        if (root.busy) {
+            root.progressIndex = 0
+            root.progressDone = 0
+            root.progressTotal = 0
+        }
+    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -73,11 +86,35 @@ Item {
             onToggled: root.lossless = checked
         }
 
-        PlasmaComponents.Button {
+        RowLayout {
             Layout.fillWidth: true
-            text: i18n("compress")
-            enabled: root.uris.length > 0
-            onClicked: root.compressRequested()
+            PlasmaComponents.Button {
+                id: compressButton
+                Layout.fillWidth: true
+                enabled: root.uris.length > 0 && !root.busy
+                onClicked: root.compressRequested()
+
+                // idle: text label; busy: the ring takes over the button
+                contentItem: Item {
+                    PlasmaComponents.Label {
+                        anchors.centerIn: parent
+                        visible: !root.busy
+                        text: i18n("compress")
+                    }
+                    Spinner {
+                        anchors.centerIn: parent
+                        visible: root.busy
+                        running: root.busy
+                        radius: Math.max(6, parent.height / 2 - 4)
+                    }
+                    PlasmaComponents.Label {
+                        anchors.centerIn: parent
+                        visible: root.busy && root.progressTotal > 0
+                        text: i18n("%1/%2", root.progressIndex + 1, root.progressTotal)
+                        font.pixelSize: 8
+                    }
+                }
+            }
         }
     }
 }
