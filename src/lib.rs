@@ -5,6 +5,8 @@ use std::fs;
 use std::io::{Cursor, Write};
 use std::path::{Path, PathBuf};
 
+mod kpic_png;
+
 #[derive(Debug)]
 pub struct Job {
     pub input: PathBuf,
@@ -91,6 +93,13 @@ pub fn encode_image(
                 ExtendedColorType::Rgba8,
             )?;
         }
+        "png-lossy" => {
+            // lossy palette quantization, keep slider meaning against the carrier
+            // format's intrinsic ceiling.
+            let rgba = img.to_rgba8();
+            let bytes = kpic_png::quantize(rgba.as_raw(), rgba.width(), rgba.height(), quality)?;
+            buf.write_all(&bytes)?;
+        }
         "webp" => {
             let rgba = img.to_rgba8();
             let encoder = webp::Encoder::from_rgba(
@@ -125,8 +134,27 @@ pub fn compress_image(
     quality: u8,
     lossless: bool,
 ) -> ImageResult<u64> {
+    // png in, png out, lossless: nothing to compress, plain re-encode can grow
+    // the file, so keep the original bytes. lossy png goes through palette
+    // quantization instead.
+    if format == "png" && lossless {
+        fs::copy(input, output)?;
+        return Ok(fs::metadata(output)?.len());
+    }
     let img = ImageReader::open(input)?.with_guessed_format()?.decode()?;
-    let bytes = encode_image(&img, format, quality, lossless)?;
+    let eff_format = if format == "png" { "png-lossy" } else { format };
+    let bytes = encode_image(&img, eff_format, quality, lossless)?;
+    // skip-if-larger: never write an output that grows the input.
+    if format == "png"
+        && bytes.len() as u64 >= fs::metadata(input)?.len()
+    {
+        return Err(image::ImageError::Decoding(
+            image::error::DecodingError::new(
+                image::error::ImageFormatHint::Unknown,
+                "skip-if-larger: quantization does not shrink this image",
+            ),
+        ));
+    }
     fs::write(output, bytes)?;
     Ok(fs::metadata(output)?.len())
 }
@@ -257,6 +285,36 @@ mod tests {
         let out = decode(&bytes, image::ImageFormat::Png);
         assert_eq!(out.width(), 64);
         assert_eq!(out.height(), 48);
+    }
+
+    #[test]
+    fn png_growth_skipped_not_written() {
+        // 1x1 solid png cannot be quantized smaller; compress_image must
+        // refuse instead of writing a larger file.
+        let dir = std::env::temp_dir();
+        let input = dir.join("kpic-tiny-input.png");
+        let output = dir.join("kpic-tiny-output.png");
+        let tiny = image::RgbaImage::from_pixel(1, 1, image::Rgba([200, 150, 100, 255]));
+        let tiny_png = {
+            let mut buf = Cursor::new(Vec::new());
+            image::codecs::png::PngEncoder::new(&mut buf)
+                .write_image(
+                    tiny.as_raw(),
+                    tiny.width(),
+                    tiny.height(),
+                    image::ExtendedColorType::Rgba8,
+                )
+                .unwrap();
+            buf.into_inner()
+        };
+        fs::write(&input, &tiny_png).unwrap();
+        let err = compress_image(&input, &output, "png", 50, false).unwrap_err();
+        assert!(
+            format!("{err}").contains("skip-if-larger"),
+            "unexpected error: {err}"
+        );
+        assert!(!output.exists(), "oversized output must not be written");
+        let _ = fs::remove_file(&input);
     }
 
     #[test]
