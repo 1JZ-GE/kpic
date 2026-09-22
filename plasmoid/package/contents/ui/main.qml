@@ -35,7 +35,9 @@ PlasmoidItem {
 
             Kirigami.Icon {
                 anchors.fill: parent
-                source: "archive-insert"
+                source: Qt.resolvedUrl(Kirigami.Theme.colorScheme === Kirigami.Theme.Dark
+                    ? "../icons/kpic-downscale-dark.svg"
+                    : "../icons/kpic-downscale.svg")
             }
         }
 

@@ -6,7 +6,7 @@
         ],
         "Category": "Utilities",
         "Description": "Batch compress images via the kpic daemon",
-        "Icon": "archive-insert",
+        "Icon": "/icons/kpic-downscale.svg",
         "Id": "org.kpic.compressor",
         "Name": "Image Compressor",
         "Version": "0.1.0",
