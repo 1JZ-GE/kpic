@@ -54,7 +54,7 @@ Item {
             Layout.fillWidth: true
             Layout.preferredHeight: 200
             Layout.topMargin: 0
-            border.color: "#484848"
+            border.color: Kirigami.Theme.disabledTextColor
             border.width: 1
             clip: true
             color: "transparent"
@@ -63,7 +63,7 @@ Item {
             PlasmaComponents.Label {
                 anchors.centerIn: parent
                 text: i18n("Drop or click\nto add image")
-                color: "#ffffff"
+                color: Kirigami.Theme.disabledTextColor
                 font.pixelSize: 16
                 font.weight: Font.Normal
                 horizontalAlignment: Text.AlignHCenter
@@ -93,7 +93,7 @@ Item {
             PlasmaComponents.Label {
                 Layout.fillWidth: true
                 text: i18n("Quality")
-                color: "#ffffff"
+                color: Kirigami.Theme.textColor
                 font.pixelSize: 16
                 font.weight: Font.Medium
             }
@@ -107,44 +107,7 @@ Item {
                 editable: true
                 font.pixelSize: 16
                 font.weight: Font.Medium
-                // leftPadding handled by template; don't override
                 onValueModified: root.quality = value
-
-                background: Rectangle {
-                    color: "#323232"
-                    radius: 8
-                    border.color: "#484848"
-                    border.width: 1
-                }
-                contentItem: TextInput {
-                    text: qualitySpin.value
-                    color: "#ffffff"
-                    font: qualitySpin.font
-                    horizontalAlignment: Text.AlignLeft
-                    verticalAlignment: Text.AlignVCenter
-                    validator: IntValidator { bottom: qualitySpin.from; top: qualitySpin.to }
-                    onAccepted: qualitySpin.value = Number(text)
-                }
-                up.indicator: Item {
-                    implicitWidth: 32
-                    implicitHeight: 32
-                    Text {
-                        anchors.centerIn: parent
-                        text: "\u25B2"
-                        color: "#ffffff"
-                        font.pixelSize: 10
-                    }
-                }
-                down.indicator: Item {
-                    implicitWidth: 32
-                    implicitHeight: 32
-                    Text {
-                        anchors.centerIn: parent
-                        text: "\u25BC"
-                        color: "#ffffff"
-                        font.pixelSize: 10
-                    }
-                }
             }
         }
 
@@ -157,7 +120,7 @@ Item {
             PlasmaComponents.Label {
                 Layout.fillWidth: true
                 text: i18n("Format")
-                color: "#ffffff"
+                color: Kirigami.Theme.textColor
                 font.pixelSize: 16
                 font.weight: Font.Medium
             }
@@ -167,31 +130,8 @@ Item {
                 Layout.preferredHeight: 32
                 font.pixelSize: 16
                 font.weight: Font.Medium
-                leftPadding: 13
                 model: [i18n("keep"), "jpg", "png", "webp"]
                 onActivated: (index) => root.format = index === 0 ? "" : model[index]
-
-                background: Rectangle {
-                    color: "#323232"
-                    radius: 8
-                    border.color: "#484848"
-                    border.width: 1
-                }
-                contentItem: Text {
-                    text: formatCombo.displayText
-                    color: "#ffffff"
-                    font: formatCombo.font
-                    horizontalAlignment: Text.AlignLeft
-                    verticalAlignment: Text.AlignVCenter
-                }
-                indicator: Text {
-                    text: "\u25BC"
-                    color: "#ffffff"
-                    font.pixelSize: 9
-                    anchors.right: parent.right
-                    anchors.rightMargin: 12
-                    anchors.verticalCenter: parent.verticalCenter
-                }
             }
         }
 
@@ -208,19 +148,13 @@ Item {
                 enabled: root.uris.length > 0 && !root.busy
                 onClicked: root.compressRequested()
 
-                background: Rectangle {
-                    color: parent.down ? "#3d3d3d" : (parent.hovered ? "#383838" : "#343434")
-                    radius: 12
-                    border.color: "#484848"
-                    border.width: 1
-                }
                 // idle: label; busy: dots spinner + batch count
                 contentItem: Item {
                     PlasmaComponents.Label {
                         anchors.centerIn: parent
                         visible: !root.busy
                         text: i18n("Compress")
-                        color: "#ffffff"
+                        color: compressButton.enabled ? Kirigami.Theme.textColor : Kirigami.Theme.disabledTextColor
                         font.pixelSize: 16
                         font.weight: Font.Medium
                     }
@@ -234,7 +168,7 @@ Item {
                         anchors.centerIn: parent
                         visible: root.busy && root.progressTotal > 0
                         text: i18n("%1/%2", root.progressIndex + 1, root.progressTotal)
-                        color: "#ffffff"
+                        color: Kirigami.Theme.textColor
                         font.pixelSize: 8
                     }
                 }
@@ -246,19 +180,11 @@ Item {
                 enabled: true
                 onClicked: if (root.busy) root.cancelRequested()
 
-                background: Rectangle {
-                    color: root.busy
-                        ? (parent.down ? "#3d3d3d" : (parent.hovered ? "#383838" : "#343434"))
-                        : "#343434"
-                    radius: 12
-                    border.color: root.busy ? "#484848" : "#484848"
-                    border.width: 1
-                }
                 contentItem: Item {
                     PlasmaComponents.Label {
                         anchors.centerIn: parent
                         text: i18n("Cancel")
-                        color: root.busy ? "#ffffff" : "#7a7a7a"
+                        color: root.busy ? Kirigami.Theme.textColor : Kirigami.Theme.disabledTextColor
                         font.pixelSize: 16
                         font.weight: Font.Medium
                     }
