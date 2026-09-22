@@ -8,9 +8,9 @@ Item {
     Layout.minimumWidth: 320
     Layout.maximumWidth: 320
     Layout.preferredWidth: 320
-    Layout.minimumHeight: 480
-    Layout.maximumHeight: 480
-    Layout.preferredHeight: 480
+    Layout.minimumHeight: 440
+    Layout.maximumHeight: 440
+    Layout.preferredHeight: 440
     // urls dropped on the compact icon while the popup was closed
     property var initialUrls: []
     // dbus client owned by main.qml; drives busy + progress signals

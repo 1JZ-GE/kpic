@@ -53,15 +53,14 @@ Item {
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.leftMargin: 30
-        anchors.rightMargin: 30
-        anchors.topMargin: 32
-        anchors.bottomMargin: 24
+        anchors.leftMargin: 12
+        anchors.rightMargin: 12
+        anchors.bottomMargin: 12
         spacing: 0
 
         Rectangle {
             Layout.fillWidth: true
-            Layout.preferredHeight: 200
+            Layout.preferredHeight: 180
             Layout.topMargin: 0
             border.color: Qt.alpha(Kirigami.Theme.disabledTextColor, 0.5)
             border.width: 1
@@ -129,7 +128,7 @@ Item {
         RowLayout {
             Layout.fillWidth: true
             Layout.preferredHeight: 32
-            Layout.topMargin: 26
+            Layout.topMargin: 14
             spacing: 20
 
             PlasmaComponents.Label {
@@ -157,7 +156,7 @@ Item {
         RowLayout {
             Layout.fillWidth: true
             Layout.preferredHeight: 32
-            Layout.topMargin: 22
+            Layout.topMargin: 14
             spacing: 20
 
             PlasmaComponents.Label {
@@ -181,7 +180,7 @@ Item {
         RowLayout {
             Layout.fillWidth: true
             Layout.preferredHeight: 32
-            Layout.topMargin: 22
+            Layout.topMargin: 14
             spacing: 20
 
             PlasmaComponents.Label {
@@ -205,14 +204,14 @@ Item {
 
         RowLayout {
             Layout.fillWidth: true
-            Layout.preferredHeight: 44
-            Layout.topMargin: 22
+            Layout.preferredHeight: 40
+            Layout.topMargin: 14
             spacing: 20
 
             PlasmaComponents.Button {
                 id: compressButton
                 Layout.preferredWidth: 120
-                Layout.preferredHeight: 44
+                Layout.preferredHeight: 40
                 enabled: root.uris.length > 0 && !root.busy
                 onClicked: root.compressRequested()
 
@@ -244,7 +243,7 @@ Item {
 
             PlasmaComponents.Button {
                 Layout.preferredWidth: 120
-                Layout.preferredHeight: 44
+                Layout.preferredHeight: 40
                 enabled: true
                 onClicked: if (root.busy) root.cancelRequested()
 
