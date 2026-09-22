@@ -5,7 +5,7 @@ import org.kde.plasma.plasma5support as P5Support
 Item {
     id: root
     readonly property string service: "org.kpic.ImgSqueeze"
-    readonly property string bin: Qt.resolvedUrl("../daemon/imgsqueeze").toString().substring(7)
+    readonly property string bin: Qt.resolvedUrl("../daemon/kpic").toString().substring(7)
 
     // spawn the daemon unless its bus name is already registered
     function ensure() {
@@ -27,7 +27,7 @@ Item {
         connectedSources: []
         onNewData: (source, data) => {
             if (data["exit code"] !== 0)
-                console.error("imgsqueeze daemon start failed", data["stderr"])
+                console.error("kpic daemon start failed", data["stderr"])
             runner.disconnectSource(source)
         }
     }

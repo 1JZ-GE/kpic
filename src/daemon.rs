@@ -1,5 +1,5 @@
 // session d-bus daemon: compress batches with live progress + results.
-use imgsqueeze::{run_batch, BatchProgress, CompressOptions, FileResult};
+use kpic::{run_batch, BatchProgress, CompressOptions, FileResult};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};

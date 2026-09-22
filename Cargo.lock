@@ -346,20 +346,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "imgsqueeze"
-version = "0.1.0"
-dependencies = [
- "flate2",
- "image",
- "imagequant",
- "oxipng",
- "serde",
- "tokio",
- "webp",
- "zbus",
-]
-
-[[package]]
 name = "indexmap"
 version = "2.14.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -389,6 +375,20 @@ dependencies = [
  "cfg-if",
  "futures-util",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "kpic"
+version = "0.1.0"
+dependencies = [
+ "flate2",
+ "image",
+ "imagequant",
+ "oxipng",
+ "serde",
+ "tokio",
+ "webp",
+ "zbus",
 ]
 
 [[package]]

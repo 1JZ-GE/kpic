@@ -1,5 +1,5 @@
 [package]
-name = "imgsqueeze"
+name = "kpic"
 version = "0.1.0"
 edition = "2024"
 description = "Multi-format image compressor for KDE Plasma (d-bus daemon)"
