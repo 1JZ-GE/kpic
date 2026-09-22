@@ -1,0 +1,16 @@
+[package]
+name = "imgsqueeze"
+version = "0.1.0"
+edition = "2024"
+description = "Multi-format image compressor for KDE Plasma (CLI core)"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+image = { version = "0.25.10", default-features = false, features = ["jpeg", "png", "webp"] }
+webp = "0.3"
+rayon = "1.8"
+indicatif = "0.17"
+
+[profile.release]
+lto = true
+strip = true
