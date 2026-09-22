@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import org.kde.plasma.components as PlasmaComponents
-import org.kde.plasma.core as PlasmaCore
+import org.kde.kirigami as Kirigami
 
 Item {
     id: root
@@ -13,15 +13,15 @@ Item {
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: PlasmaCore.Units.gridUnit
-        spacing: PlasmaCore.Units.smallSpacing
+        anchors.margins: Kirigami.Units.gridUnit
+        spacing: Kirigami.Units.smallSpacing
 
         Rectangle {
             id: dropZone
             Layout.fillWidth: true
             Layout.preferredHeight: 160
-            color: dropArea.containsDrag ? PlasmaCore.Theme.highlightColor : "transparent"
-            border.color: PlasmaCore.Theme.textColor
+            color: dropArea.containsDrag ? Kirigami.Theme.highlightColor : "transparent"
+            border.color: Kirigami.Theme.textColor
             border.width: 1
             radius: 4
 
