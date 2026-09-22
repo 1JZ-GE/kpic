@@ -134,11 +134,24 @@ pub fn compress_image(
     quality: u8,
     lossless: bool,
 ) -> ImageResult<u64> {
-    // png in, png out, lossless: nothing to compress, plain re-encode can grow
-    // the file, so keep the original bytes. lossy png goes through palette
-    // quantization instead.
+    // png in, png out, lossless: pixels and metadata stay exact, use oxipng
+    // lossless optimizer on the original bytes, never grow the file.
+    // lossy png goes through palette quantization instead.
     if format == "png" && lossless {
-        fs::copy(input, output)?;
+        let input_bytes = fs::read(input)?;
+        let optimized = oxipng::optimize_from_memory(&input_bytes, &oxipng::Options::from_preset(2))
+            .map_err(|e| {
+                image::ImageError::Decoding(image::error::DecodingError::new(
+                    image::error::ImageFormatHint::Unknown,
+                    format!("oxipng: {e}"),
+                ))
+            })?;
+        let out_bytes = if optimized.len() < input_bytes.len() {
+            optimized
+        } else {
+            input_bytes
+        };
+        fs::write(output, out_bytes)?;
         return Ok(fs::metadata(output)?.len());
     }
     let img = ImageReader::open(input)?.with_guessed_format()?.decode()?;
@@ -285,6 +298,27 @@ mod tests {
         let out = decode(&bytes, image::ImageFormat::Png);
         assert_eq!(out.width(), 64);
         assert_eq!(out.height(), 48);
+    }
+
+    #[test]
+    fn png_lossless_optimizes_or_copies_never_grows() {
+        let dir = std::env::temp_dir();
+        let input = dir.join("kpic-lossless-input.png");
+        let output = dir.join("kpic-lossless-output.png");
+        // sloppy png source: image crate default encode, not optimized
+        let raw = encode_image(&test_image(), "png", 100, false).unwrap();
+        fs::write(&input, &raw).unwrap();
+        let out_size = compress_image(&input, &output, "png", 0, true).unwrap();
+        let input_len = fs::metadata(&input).unwrap().len();
+        assert!(
+            out_size <= input_len,
+            "lossless grew the file: {out_size} > {input_len}"
+        );
+        // pixels bit-exact against source
+        let out = decode(&fs::read(&output).unwrap(), image::ImageFormat::Png);
+        assert_eq!(out.to_rgba8().as_raw(), test_image().to_rgba8().as_raw());
+        let _ = fs::remove_file(&input);
+        let _ = fs::remove_file(&output);
     }
 
     #[test]

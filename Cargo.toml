@@ -9,6 +9,7 @@ image = { version = "0.25.10", default-features = false, features = ["jpeg", "pn
 webp = "0.3"
 flate2 = "1"
 imagequant = { path = "../pngquant/lib" }
+oxipng = { version = "10.2.1", default-features = false, features = ["parallel"] }
 zbus = { version = "5.19", default-features = false, features = ["tokio"] }
 tokio = { version = "1", features = ["rt-multi-thread"] }
 serde = "1"

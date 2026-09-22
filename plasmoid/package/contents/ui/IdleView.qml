@@ -11,7 +11,7 @@ Item {
     implicitHeight: 440
     property var uris: []
     property int quality: 50
-    property bool lossless: false
+    property bool lossless: true
     property string format: ""
     // live job state, fed by the client via popup view
     property bool busy: false
@@ -135,7 +135,7 @@ Item {
             PlasmaComponents.Label {
                 Layout.fillWidth: true
                 text: i18n("Quality")
-                color: Kirigami.Theme.textColor
+                color: root.lossless ? Kirigami.Theme.disabledTextColor : Kirigami.Theme.textColor
                 font.pixelSize: 16
                 font.weight: Font.Medium
             }
@@ -147,6 +147,7 @@ Item {
                 to: 100
                 value: root.quality
                 editable: true
+                enabled: !root.lossless
                 font.pixelSize: 16
                 font.weight: Font.Medium
                 onValueModified: root.quality = value
@@ -174,6 +175,31 @@ Item {
                 font.weight: Font.Medium
                 model: [i18n("keep"), "jpg", "png", "webp"]
                 onActivated: (index) => root.format = index === 0 ? "" : model[index]
+            }
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 32
+            Layout.topMargin: 22
+            spacing: 20
+
+            PlasmaComponents.Label {
+                id: modeLabel
+                Layout.fillWidth: true
+                text: i18n("Mode")
+                color: Kirigami.Theme.textColor
+                font.pixelSize: 16
+                font.weight: Font.Medium
+            }
+            PlasmaComponents.CheckBox {
+                id: losslessCheck
+                Layout.preferredHeight: 32
+                checked: root.lossless
+                text: i18n("Lossless")
+                font.pixelSize: 16
+                font.weight: Font.Medium
+                onToggled: root.lossless = checked
             }
         }
 
