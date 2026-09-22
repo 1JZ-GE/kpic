@@ -49,7 +49,11 @@ impl ImgSqueeze {
         let id = self.next_id.fetch_add(1, Ordering::Relaxed);
         let tag = Arc::new(SearchTag {
             cancel: Arc::new(AtomicBool::new(false)),
-            files: uris.iter().map(PathBuf::from).collect(),
+            // drop uris come as file:// links, not plain paths
+            files: uris
+                .iter()
+                .map(|u| PathBuf::from(u.strip_prefix("file://").unwrap_or(u)))
+                .collect(),
             opts: CompressOptions {
                 quality,
                 lossless,
