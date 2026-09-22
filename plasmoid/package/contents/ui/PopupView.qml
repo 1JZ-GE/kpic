@@ -18,6 +18,7 @@ Item {
     signal dropsConsumed
     signal compressRequested(var uris, int quality, bool lossless, string format)
     signal cancelRequested
+    signal filePickingChanged(bool picking)
 
     onInitialUrlsChanged: {
         if (root.initialUrls.length) {
@@ -34,6 +35,7 @@ Item {
             root.compressRequested(idle.uris, idle.quality, idle.lossless, idle.format)
         }
         onCancelRequested: root.cancelRequested()
+        onFilePickingChanged: (picking) => root.filePickingChanged(picking)
     }
 
     Connections {

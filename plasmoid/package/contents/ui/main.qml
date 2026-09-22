@@ -7,6 +7,10 @@ PlasmoidItem {
     id: root
     Layout.preferredWidth: 320
     Layout.preferredHeight: 440
+    // keep the popup alive while the file picker owns focus; outside clicks
+    // still dismiss it otherwise
+    property bool filePicking: false
+    hideOnWindowDeactivate: !root.filePicking
 
     // urls forwarded from a drop on the small panel icon
     property var pendingDrops: []
@@ -56,5 +60,6 @@ PlasmoidItem {
             client.start(uris, quality, lossless, format)
         }
         onCancelRequested: client.cancel()
+        onFilePickingChanged: (picking) => root.filePicking = picking
     }
 }

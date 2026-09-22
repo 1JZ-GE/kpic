@@ -20,6 +20,8 @@ Item {
     property int progressTotal: 0
     signal compressRequested
     signal cancelRequested
+    // popup-lifetime toggle while the file picker owns screen focus
+    signal filePickingChanged(bool picking)
 
     onBusyChanged: {
         if (root.busy) {
@@ -29,10 +31,17 @@ Item {
         }
     }
 
+    function _fileName(url) {
+        return String(url).replace(/^file:\/\//, "").split("/").pop()
+    }
+
     FileDialog {
         id: fileDialog
         fileMode: FileDialog.OpenFiles
         nameFilters: [i18n("Images (*.png *.jpg *.jpeg *.webp *.bmp *.gif)"), i18n("All files (*)")]
+        // the picker is a separate window; tell the applet to keep the popup
+        // open while it grabs focus (hide-on-deactivate would dismiss us)
+        onVisibleChanged: root.filePickingChanged(fileDialog.visible)
         onAccepted: {
             const urls = []
             for (const f of fileDialog.files)
@@ -62,12 +71,17 @@ Item {
 
             PlasmaComponents.Label {
                 anchors.centerIn: parent
-                text: i18n("Drop or click\nto add image")
+                text: root.uris.length === 0
+                    ? i18n("Drop or click\nto add image")
+                    : (root.uris.length === 1
+                        ? root._fileName(root.uris[0])
+                        : i18n("%1 images selected", root.uris.length))
                 color: Kirigami.Theme.disabledTextColor
                 font.pixelSize: 16
                 font.weight: Font.Normal
                 horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignTop
+                verticalAlignment: Text.AlignVCenter
+                wrapMode: Text.Wrap
             }
 
             MouseArea {
