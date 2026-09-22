@@ -210,7 +210,7 @@ Item {
 
             PlasmaComponents.Button {
                 id: compressButton
-                Layout.preferredWidth: 120
+                Layout.fillWidth: true
                 Layout.preferredHeight: 40
                 enabled: root.uris.length > 0 && !root.busy
                 onClicked: root.compressRequested()
@@ -242,7 +242,7 @@ Item {
             }
 
             PlasmaComponents.Button {
-                Layout.preferredWidth: 120
+                Layout.fillWidth: true
                 Layout.preferredHeight: 40
                 enabled: true
                 onClicked: if (root.busy) root.cancelRequested()
