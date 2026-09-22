@@ -2,14 +2,11 @@
 name = "imgsqueeze"
 version = "0.1.0"
 edition = "2024"
-description = "Multi-format image compressor for KDE Plasma (CLI core)"
+description = "Multi-format image compressor for KDE Plasma (d-bus daemon)"
 
 [dependencies]
-clap = { version = "4", features = ["derive"] }
 image = { version = "0.25.10", default-features = false, features = ["jpeg", "png", "webp"] }
 webp = "0.3"
-rayon = "1.8"
-indicatif = "0.17"
 zbus = { version = "5.19", default-features = false, features = ["tokio"] }
 tokio = { version = "1", features = ["rt-multi-thread"] }
 serde = "1"

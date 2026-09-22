@@ -118,9 +118,9 @@ impl ImgSqueeze {
     }
 }
 
-fn file_result_arrays(
-    results: &[FileResult],
-) -> (Vec<String>, Vec<String>, Vec<u64>, Vec<u64>, Vec<String>) {
+type FileResultArrays = (Vec<String>, Vec<String>, Vec<u64>, Vec<u64>, Vec<String>);
+
+fn file_result_arrays(results: &[FileResult]) -> FileResultArrays {
     results.iter().fold(
         (Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new()),
         |(mut u, mut o, mut i, mut os, mut e), r| {

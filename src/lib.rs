@@ -176,7 +176,7 @@ pub fn run_batch(
     let mut out = Vec::with_capacity(jobs.len());
     let mut done = 0usize;
     for (input, job) in inputs.iter().zip(jobs) {
-        if cancel.map_or(false, |c| c.load(std::sync::atomic::Ordering::Relaxed)) {
+        if cancel.is_some_and(|c| c.load(std::sync::atomic::Ordering::Relaxed)) {
             out.push(FileResult {
                 input: input.clone(),
                 error: Some("cancelled".into()),
@@ -207,7 +207,6 @@ pub fn run_batch(
                             input_size,
                             output_size: None,
                             error: Some(e),
-                            ..Default::default()
                         }),
                     }
                 }
