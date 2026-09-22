@@ -1,0 +1,236 @@
+use image::codecs::jpeg::JpegEncoder;
+use image::codecs::png::PngEncoder;
+use image::{DynamicImage, ExtendedColorType, ImageEncoder, ImageReader, ImageResult};
+use std::fs;
+use std::io::{Cursor, Write};
+use std::path::{Path, PathBuf};
+
+#[derive(Debug)]
+pub struct Job {
+    pub input: PathBuf,
+    pub output: PathBuf,
+    pub format: String,
+}
+
+pub fn output_ext(format: &str) -> &'static str {
+    match format {
+        "jpg" | "jpeg" => "jpg",
+        "png" => "png",
+        _ => "webp",
+    }
+}
+
+/// detect image format from file signature (not extension).
+pub fn detect_format(path: &Path) -> Option<&'static str> {
+    match ImageReader::open(path).ok()?.with_guessed_format().ok()?.format() {
+        Some(image::ImageFormat::Jpeg) => Some("jpg"),
+        Some(image::ImageFormat::Png) => Some("png"),
+        Some(image::ImageFormat::WebP) => Some("webp"),
+        _ => None,
+    }
+}
+
+/// resolve output format + unique output name per input, serially.
+/// `override_format` converts all files; `None` keeps each input format.
+pub fn resolve_jobs(
+    inputs: &[PathBuf],
+    override_format: Option<&str>,
+) -> Vec<Result<Job, String>> {
+    let mut used: std::collections::HashSet<PathBuf> = std::collections::HashSet::new();
+    inputs
+        .iter()
+        .map(|input| {
+            let format = match override_format {
+                Some(f) => f.to_string(),
+                None => detect_format(input)
+                    .ok_or_else(|| format!("{}: unsupported input format", input.display()))?
+                    .to_string(),
+            };
+            let stem = input
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("image");
+            let dir = input.parent().unwrap_or_else(|| Path::new("."));
+            let mut candidate = dir.join(format!("{stem}-compressed.{}", output_ext(&format)));
+            let mut n = 2;
+            while used.contains(&candidate) || candidate.exists() {
+                candidate = dir.join(format!("{stem}-compressed-{n}.{}", output_ext(&format)));
+                n += 1;
+            }
+            used.insert(candidate.clone());
+            Ok(Job {
+                input: input.clone(),
+                output: candidate,
+                format,
+            })
+        })
+        .collect()
+}
+
+pub fn encode_image(
+    img: &DynamicImage,
+    format: &str,
+    quality: u8,
+    lossless: bool,
+) -> ImageResult<Vec<u8>> {
+    let mut buf = Cursor::new(Vec::new());
+
+    match format {
+        "jpg" | "jpeg" => {
+            // jpeg has no alpha, flatten and force lossy encode.
+            let rgb = img.to_rgb8();
+            JpegEncoder::new_with_quality(&mut buf, quality.clamp(1, 100))
+                .encode_image(&DynamicImage::ImageRgb8(rgb))?;
+        }
+        "png" => {
+            let rgba = img.to_rgba8();
+            PngEncoder::new(&mut buf).write_image(
+                rgba.as_raw().as_slice(),
+                rgba.width(),
+                rgba.height(),
+                ExtendedColorType::Rgba8,
+            )?;
+        }
+        "webp" => {
+            let rgba = img.to_rgba8();
+            let encoder = webp::Encoder::from_rgba(
+                rgba.as_raw().as_slice(),
+                rgba.width(),
+                rgba.height(),
+            );
+            let image = if lossless {
+                encoder.encode_lossless()
+            } else {
+                encoder.encode(quality as f32)
+            };
+            buf.write_all(image.as_ref())?;
+        }
+        _ => {
+            return Err(image::ImageError::Decoding(
+                image::error::DecodingError::new(
+                    image::error::ImageFormatHint::Unknown,
+                    format!("unsupported output format: {format}"),
+                ),
+            ))
+        }
+    }
+
+    Ok(buf.into_inner())
+}
+
+pub fn compress_image(
+    input: &Path,
+    output: &Path,
+    format: &str,
+    quality: u8,
+    lossless: bool,
+) -> ImageResult<u64> {
+    let img = ImageReader::open(input)?.with_guessed_format()?.decode()?;
+    let bytes = encode_image(&img, format, quality, lossless)?;
+    fs::write(output, bytes)?;
+    Ok(fs::metadata(output)?.len())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use image::RgbaImage;
+
+    /// deterministic 64x48 test image with a gradient + a solid block.
+    fn test_image() -> DynamicImage {
+        let mut img = RgbaImage::new(64, 48);
+        for (x, y, p) in img.enumerate_pixels_mut() {
+            *p = image::Rgba([
+                x as u8,
+                y as u8,
+                (x + y) as u8,
+                255,
+            ]);
+        }
+        DynamicImage::ImageRgba8(img)
+    }
+
+    fn decode(bytes: &[u8], kind: image::ImageFormat) -> DynamicImage {
+        image::load_from_memory_with_format(bytes, kind).unwrap()
+    }
+
+    #[test]
+    fn encode_decode_jpeg_roundtrip() {
+        let bytes = encode_image(&test_image(), "jpg", 80, false).unwrap();
+        let out = decode(&bytes, image::ImageFormat::Jpeg);
+        assert_eq!(out.width(), 64);
+        assert_eq!(out.height(), 48);
+    }
+
+    #[test]
+    fn encode_decode_png_roundtrip() {
+        let bytes = encode_image(&test_image(), "png", 80, false).unwrap();
+        let out = decode(&bytes, image::ImageFormat::Png);
+        assert_eq!(out.width(), 64);
+        assert_eq!(out.height(), 48);
+    }
+
+    #[test]
+    fn encode_decode_webp_lossless_roundtrip() {
+        let bytes = encode_image(&test_image(), "webp", 80, true).unwrap();
+        let out = decode(&bytes, image::ImageFormat::WebP);
+        assert_eq!(out.width(), 64);
+        assert_eq!(out.height(), 48);
+    }
+
+    #[test]
+    fn encode_decode_webp_lossy_roundtrip() {
+        let bytes = encode_image(&test_image(), "webp", 80, false).unwrap();
+        let out = decode(&bytes, image::ImageFormat::WebP);
+        assert_eq!(out.width(), 64);
+        assert_eq!(out.height(), 48);
+    }
+
+    #[test]
+    fn lossless_webp_roundtrip_is_exact() {
+        let img = test_image();
+        let bytes = encode_image(&img, "webp", 80, true).unwrap();
+        let out = decode(&bytes, image::ImageFormat::WebP);
+        // lossless webp must reproduce pixels bit-for-bit.
+        assert_eq!(out.to_rgba8().clone().into_raw(), img.to_rgba8().into_raw());
+    }
+
+    #[test]
+    fn lossy_webp_smaller_than_lossless() {
+        // lossy encoding must be smaller than lossless.
+        let mut img = RgbaImage::new(64, 48);
+        let mut seed = 0x12345678u32;
+        for (_, _, p) in img.enumerate_pixels_mut() {
+            seed = seed.wrapping_mul(1664525).wrapping_add(1013904223);
+            *p = image::Rgba([seed as u8, (seed >> 8) as u8, (seed >> 16) as u8, 255]);
+        }
+        let img = DynamicImage::ImageRgba8(img);
+        let lossy = encode_image(&img, "webp", 60, false).unwrap();
+        let lossless = encode_image(&img, "webp", 60, true).unwrap();
+        assert!(lossy.len() < lossless.len());
+    }
+
+    #[test]
+    fn unsupported_format_errors() {
+        let err = encode_image(&test_image(), "gif", 80, false);
+        assert!(err.is_err());
+    }
+
+    #[test]
+    fn resolve_jobs_avoids_collisions() {
+        let dir = std::env::temp_dir();
+        let a = dir.join("photo.png");
+        let b = dir.join("photo.webp");
+        // force the ideal name to appear taken.
+        std::fs::write(dir.join("photo-compressed.png"), b"x").unwrap();
+        let jobs: Vec<Job> = resolve_jobs(&[a, b], Some("png"))
+            .into_iter()
+            .map(|r| r.unwrap())
+            .collect();
+        assert_ne!(jobs[0].output, jobs[1].output);
+        for j in &jobs {
+            assert!(j.output.to_str().unwrap().contains("-compressed"));
+        }
+        std::fs::remove_file(dir.join("photo-compressed.png")).ok();
+    }
+}
