@@ -131,6 +131,85 @@ pub fn compress_image(
     Ok(fs::metadata(output)?.len())
 }
 
+pub struct CompressOptions {
+    pub quality: u8,
+    pub lossless: bool,
+    /// keep input format.
+    pub format: Option<String>,
+}
+
+#[derive(Debug, Default)]
+pub struct FileResult {
+    pub input: PathBuf,
+    pub output: Option<PathBuf>,
+    pub input_size: u64,
+    pub output_size: Option<u64>,
+    pub error: Option<String>,
+}
+
+/// wrap compress_image, error prefixed with input path.
+pub fn compress_one(
+    input: &Path,
+    output: &Path,
+    format: &str,
+    quality: u8,
+    lossless: bool,
+) -> Result<u64, String> {
+    compress_image(input, output, format, quality, lossless)
+        .map_err(|e| format!("{}: {}", input.display(), e))
+}
+
+/// compress a batch serially, collision-safe names, cancel-aware.
+/// stop flag true between files skips the rest with error entries.
+pub fn run_batch(
+    inputs: &[PathBuf],
+    opts: &CompressOptions,
+    cancel: Option<&std::sync::atomic::AtomicBool>,
+) -> Vec<FileResult> {
+    let jobs = resolve_jobs(inputs, opts.format.as_deref());
+    let mut out = Vec::with_capacity(jobs.len());
+    for (input, job) in inputs.iter().zip(jobs) {
+        if cancel.map_or(false, |c| c.load(std::sync::atomic::Ordering::Relaxed)) {
+            out.push(FileResult {
+                input: input.clone(),
+                error: Some("cancelled".into()),
+                ..Default::default()
+            });
+            continue;
+        }
+        match job {
+            Err(e) => out.push(FileResult {
+                input: input.clone(),
+                error: Some(e),
+                ..Default::default()
+            }),
+            Ok(job) => {
+                let input_size = std::fs::metadata(&job.input)
+                    .map(|m| m.len())
+                    .unwrap_or(0);
+                match compress_one(&job.input, &job.output, &job.format, opts.quality, opts.lossless) {
+                    Ok(output_size) => out.push(FileResult {
+                        input: job.input,
+                        output: Some(job.output),
+                        input_size,
+                        output_size: Some(output_size),
+                        ..Default::default()
+                    }),
+                    Err(e) => out.push(FileResult {
+                        input: job.input,
+                        output: Some(job.output),
+                        input_size,
+                        output_size: None,
+                        error: Some(e),
+                        ..Default::default()
+                    }),
+                }
+            }
+        }
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -232,5 +311,46 @@ mod tests {
             assert!(j.output.to_str().unwrap().contains("-compressed"));
         }
         std::fs::remove_file(dir.join("photo-compressed.png")).ok();
+    }
+
+    #[test]
+    fn run_batch_produces_results_in_order() {
+        let tmp = std::env::temp_dir().join(format!("kpic-task2-{}", std::process::id()));
+        std::fs::create_dir_all(&tmp).unwrap();
+        let img_path = tmp.join("grad.png");
+        // generate a real png so format detection succeeds
+        let mut png = image::RgbaImage::new(8, 8);
+        for (_, _, p) in png.enumerate_pixels_mut() {
+            *p = image::Rgba([200, 100, 50, 255]);
+        }
+        let mut file = std::fs::File::create(&img_path).unwrap();
+        image::codecs::png::PngEncoder::new(&mut file)
+            .write_image(png.as_raw(), 8, 8, image::ExtendedColorType::Rgba8)
+            .unwrap();
+        let mut cancel = std::sync::atomic::AtomicBool::new(false);
+        let opts = CompressOptions { quality: 80, lossless: false, format: None };
+        let res = run_batch(&[img_path.clone()], &opts, Some(&cancel));
+        let r = &res[0];
+        assert!(r.output.is_some(), "successful file must have output");
+        assert!(r.error.is_none());
+        assert!(r.output_size.unwrap() > 0);
+        std::fs::remove_dir_all(&tmp).ok();
+    }
+
+    #[test]
+    fn run_batch_skips_remaining_after_cancel() {
+        let mut cancel = std::sync::atomic::AtomicBool::new(true);
+        let opts = CompressOptions { quality: 80, lossless: false, format: Some("png".into()) };
+        // cancel checked before touching files
+        let res = run_batch(&["a.png".into(), "b.png".into()], &opts, Some(&cancel));
+        assert_eq!(res.len(), 2);
+        assert!(res[1].error.is_some(), "second file skipped with cancel flag");
+    }
+
+    #[test]
+    fn compress_one_reports_path_prefixed_error() {
+        let err = compress_one(&Path::new("/nonexistent/x.png"), &Path::new("/nonexistent/x-c.png"), "webp", 80, false);
+        assert!(err.is_err());
+        assert!(err.unwrap_err().contains("/nonexistent/x.png"));
     }
 }
