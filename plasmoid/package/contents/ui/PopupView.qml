@@ -1,9 +1,11 @@
 import QtQuick
-import org.kde.plasma.components as PlasmaComponents
 
 Item {
-    PlasmaComponents.Label {
-        anchors.centerIn: parent
-        text: "kpic placeholder"
+    IdleView {
+        id: idle
+        anchors.fill: parent
+        onCompressRequested: {
+            console.log("compress", idle.uris.length, "files")
+        }
     }
 }

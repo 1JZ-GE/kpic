@@ -7,8 +7,8 @@ import org.kde.plasma.plasma5support as P5Support
 
 PlasmoidItem {
     id: root
-    Layout.preferredWidth: 360 * PlasmaCore.Units.devicePixelRatio
-    Layout.preferredHeight: 480 * PlasmaCore.Units.devicePixelRatio
+    Layout.preferredWidth: 320
+    Layout.preferredHeight: 640
 
     // spawn the bundled daemon on load; safe to re-run, daemon exits itself
     // when the bus name is already taken
@@ -20,13 +20,19 @@ PlasmoidItem {
     }
 
     compactRepresentation: Item {
-        Kirigami.Icon {
-            anchors.fill: parent
-            source: "archive-insert"
-        }
+        id: compactRoot
+        Layout.preferredWidth: Kirigami.Units.iconSizes.medium
+        Layout.preferredHeight: Kirigami.Units.iconSizes.medium
+
         MouseArea {
             anchors.fill: parent
-            onClicked: Plasmoid.expanded = !Plasmoid.expanded
+            hoverEnabled: true
+            onClicked: root.expanded = !root.expanded
+
+            Kirigami.Icon {
+                anchors.fill: parent
+                source: "archive-insert"
+            }
         }
     }
 
