@@ -54,7 +54,7 @@ Item {
             Layout.fillWidth: true
             Layout.preferredHeight: 200
             Layout.topMargin: 0
-            border.color: Kirigami.Theme.disabledTextColor
+            border.color: Qt.alpha(Kirigami.Theme.disabledTextColor, 0.5)
             border.width: 1
             clip: true
             color: "transparent"
