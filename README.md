@@ -1,7 +1,10 @@
 # kpic
 
-Batch image compressor for KDE Plasma 6. Session D-Bus daemon plus a Plasma 6
+simple image compressor for KDE Plasma 6. Session D-Bus daemon plus a Plasma 6
 widget (`org.kpic.compressor`).
+
+<img width="256"  alt="image" src="https://github.com/user-attachments/assets/f824f208-d3b0-47b5-b4fd-122132678ee0" />
+
 
 ## architecture
 
