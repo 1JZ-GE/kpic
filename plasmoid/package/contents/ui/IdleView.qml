@@ -254,12 +254,14 @@ Item {
                     border.color: root.busy ? "#484848" : "#484848"
                     border.width: 1
                 }
-                contentItem: PlasmaComponents.Label {
-                    anchors.centerIn: parent
-                    text: i18n("Cancel")
-                    color: root.busy ? "#ffffff" : "#7a7a7a"
-                    font.pixelSize: 16
-                    font.weight: Font.Medium
+                contentItem: Item {
+                    PlasmaComponents.Label {
+                        anchors.centerIn: parent
+                        text: i18n("Cancel")
+                        color: root.busy ? "#ffffff" : "#7a7a7a"
+                        font.pixelSize: 16
+                        font.weight: Font.Medium
+                    }
                 }
             }
         }
