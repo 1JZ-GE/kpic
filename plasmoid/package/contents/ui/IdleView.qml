@@ -96,6 +96,34 @@ Item {
                     root.uris = drop.urls.filter(u => u.toString().startsWith("file://"))
                 }
             }
+
+            // clear
+            MouseArea {
+                id: clearSelection
+                anchors.top: parent.top
+                anchors.right: parent.right
+                anchors.topMargin: 4
+                anchors.rightMargin: 4
+                width: 24
+                height: 24
+                z: 10
+                visible: root.uris.length > 0
+                onClicked: root.uris = []
+
+                Rectangle {
+                    anchors.fill: parent
+                    radius: height / 2
+                    color: Kirigami.Theme.backgroundColor
+                    border.color: Qt.alpha(Kirigami.Theme.disabledTextColor, 0.5)
+                    border.width: 1
+                    PlasmaComponents.Label {
+                        anchors.centerIn: parent
+                        text: "\u2715"
+                        color: Kirigami.Theme.textColor
+                        font.pixelSize: 12
+                    }
+                }
+            }
         }
 
         RowLayout {
