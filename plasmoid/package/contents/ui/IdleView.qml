@@ -35,6 +35,10 @@ Item {
         return String(url).replace(/^file:\/\//, "").split("/").pop()
     }
 
+    function _isImage(url) {
+        return /\.(png|jpe?g|webp|gif|bmp|tiff?|ico)$/i.test(String(url))
+    }
+
     FileDialog {
         id: fileDialog
         fileMode: FileDialog.OpenFiles
@@ -45,7 +49,8 @@ Item {
         onAccepted: {
             const urls = []
             for (const f of fileDialog.files)
-                urls.push(f.toString())
+                if (root._isImage(f.toString()))
+                    urls.push(f.toString())
             if (urls.length)
                 root.uris = urls
         }
@@ -92,7 +97,7 @@ Item {
                 anchors.fill: parent
                 onDropped: (drop) => {
                     drop.accepted = true
-                    root.uris = drop.urls.filter(u => u.toString().startsWith("file://"))
+                    root.uris = drop.urls.filter(u => root._isImage(u.toString()))
                 }
             }
 
