@@ -10,6 +10,9 @@ image = { version = "0.25.10", default-features = false, features = ["jpeg", "pn
 webp = "0.3"
 rayon = "1.8"
 indicatif = "0.17"
+zbus = { version = "5.19", default-features = false, features = ["tokio"] }
+tokio = { version = "1", features = ["rt-multi-thread"] }
+serde = "1"
 
 [profile.release]
 lto = true

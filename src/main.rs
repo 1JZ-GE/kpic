@@ -5,6 +5,8 @@ use rayon::prelude::*;
 use std::fs;
 use std::path::PathBuf;
 
+mod daemon;
+
 /// kpic compression core
 #[derive(Parser)]
 #[command(name = "imgsqueeze", about = "Compress images from the command line")]
@@ -33,6 +35,9 @@ enum Commands {
         #[arg(long)]
         lossless: bool,
     },
+
+    /// run the background d-bus service
+    Daemon,
 }
 
 #[derive(Debug)]
@@ -56,76 +61,79 @@ fn format_bytes(n: u64) -> String {
 fn main() {
     let cli = Cli::parse();
 
-    let Commands::Compress {
-        files,
-        quality,
-        format,
-        lossless,
-    } = cli.command;
-
-    let format = format.map(|f| f.to_lowercase());
-    if let Some(f) = &format {
-        if !matches!(f.as_str(), "jpg" | "jpeg" | "png" | "webp") {
-            eprintln!("unsupported format: {f} (use jpg, png, webp)");
-            std::process::exit(1);
-        }
-    }
-
-    let jobs = resolve_jobs(&files, format.as_deref());
-
-    let pb = ProgressBar::new(files.len() as u64);
-    pb.set_style(
-        ProgressStyle::with_template("[{pos}/{len}] {msg}")
-            .unwrap()
-            .progress_chars("=> "),
-    );
-
-    let results: Vec<Result<CompressResult, String>> = jobs
-        .into_par_iter()
-        .map(|job| {
-            let job = job?;
-            let input_size = fs::metadata(&job.input)
-                .map_err(|e| format!("{}: {}", job.input.display(), e))?
-                .len();
-            pb.inc(1);
-            let output_size = compress_image(
-                &job.input,
-                &job.output,
-                &job.format,
-                quality,
-                lossless,
-            )
-            .map_err(|e| format!("{}: {}", job.input.display(), e))?;
-            Ok(CompressResult {
-                input: job.input,
-                output: job.output,
-                input_size,
-                output_size,
-            })
-        })
-        .collect();
-
-    pb.finish();
-
-    let mut ok = 0;
-    for r in results {
-        match r {
-            Ok(r) => {
-                ok += 1;
-                let saved = format_bytes(r.input_size.saturating_sub(r.output_size));
-                let sign = if r.output_size < r.input_size { "-" } else { "+" };
-                println!(
-                    "{} {} -> {} ({} -> {}, {} saved)",
-                    r.input.display(),
-                    sign,
-                    r.output.display(),
-                    format_bytes(r.input_size),
-                    format_bytes(r.output_size),
-                    saved,
-                );
+    match cli.command {
+        Commands::Compress {
+            files,
+            quality,
+            format,
+            lossless,
+        } => {
+            let format = format.map(|f| f.to_lowercase());
+            if let Some(f) = &format {
+                if !matches!(f.as_str(), "jpg" | "jpeg" | "png" | "webp") {
+                    eprintln!("unsupported format: {f} (use jpg, png, webp)");
+                    std::process::exit(1);
+                }
             }
-            Err(e) => eprintln!("error: {e}"),
+
+            let jobs = resolve_jobs(&files, format.as_deref());
+
+            let pb = ProgressBar::new(files.len() as u64);
+            pb.set_style(
+                ProgressStyle::with_template("[{pos}/{len}] {msg}")
+                    .unwrap()
+                    .progress_chars("=> "),
+            );
+
+            let results: Vec<Result<CompressResult, String>> = jobs
+                .into_par_iter()
+                .map(|job| {
+                    let job = job?;
+                    let input_size = fs::metadata(&job.input)
+                        .map_err(|e| format!("{}: {}", job.input.display(), e))?
+                        .len();
+                    pb.inc(1);
+                    let output_size = compress_image(
+                        &job.input,
+                        &job.output,
+                        &job.format,
+                        quality,
+                        lossless,
+                    )
+                    .map_err(|e| format!("{}: {}", job.input.display(), e))?;
+                    Ok(CompressResult {
+                        input: job.input,
+                        output: job.output,
+                        input_size,
+                        output_size,
+                    })
+                })
+                .collect();
+
+            pb.finish();
+
+            let mut ok = 0;
+            for r in results {
+                match r {
+                    Ok(r) => {
+                        ok += 1;
+                        let saved = format_bytes(r.input_size.saturating_sub(r.output_size));
+                        let sign = if r.output_size < r.input_size { "-" } else { "+" };
+                        println!(
+                            "{} {} -> {} ({} -> {}, {} saved)",
+                            r.input.display(),
+                            sign,
+                            r.output.display(),
+                            format_bytes(r.input_size),
+                            format_bytes(r.output_size),
+                            saved,
+                        );
+                    }
+                    Err(e) => eprintln!("error: {e}"),
+                }
+            }
+            println!("done: {ok}/{} compressed", files.len());
         }
+        Commands::Daemon => daemon::run_blocking().expect("daemon failed"),
     }
-    println!("done: {ok}/{} compressed", files.len());
 }

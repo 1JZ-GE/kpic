@@ -159,15 +159,22 @@ pub fn compress_one(
         .map_err(|e| format!("{}: {}", input.display(), e))
 }
 
+pub struct BatchProgress {
+    pub callback: Box<dyn Fn(usize) + Send>,
+}
+
 /// compress a batch serially, collision-safe names, cancel-aware.
 /// stop flag true between files skips the rest with error entries.
+/// progress callback fires after each file with the finished count.
 pub fn run_batch(
     inputs: &[PathBuf],
     opts: &CompressOptions,
     cancel: Option<&std::sync::atomic::AtomicBool>,
+    progress: Option<&BatchProgress>,
 ) -> Vec<FileResult> {
     let jobs = resolve_jobs(inputs, opts.format.as_deref());
     let mut out = Vec::with_capacity(jobs.len());
+    let mut done = 0usize;
     for (input, job) in inputs.iter().zip(jobs) {
         if cancel.map_or(false, |c| c.load(std::sync::atomic::Ordering::Relaxed)) {
             out.push(FileResult {
@@ -175,36 +182,40 @@ pub fn run_batch(
                 error: Some("cancelled".into()),
                 ..Default::default()
             });
-            continue;
-        }
-        match job {
-            Err(e) => out.push(FileResult {
-                input: input.clone(),
-                error: Some(e),
-                ..Default::default()
-            }),
-            Ok(job) => {
-                let input_size = std::fs::metadata(&job.input)
-                    .map(|m| m.len())
-                    .unwrap_or(0);
-                match compress_one(&job.input, &job.output, &job.format, opts.quality, opts.lossless) {
-                    Ok(output_size) => out.push(FileResult {
-                        input: job.input,
-                        output: Some(job.output),
-                        input_size,
-                        output_size: Some(output_size),
-                        ..Default::default()
-                    }),
-                    Err(e) => out.push(FileResult {
-                        input: job.input,
-                        output: Some(job.output),
-                        input_size,
-                        output_size: None,
-                        error: Some(e),
-                        ..Default::default()
-                    }),
+        } else {
+            match job {
+                Err(e) => out.push(FileResult {
+                    input: input.clone(),
+                    error: Some(e),
+                    ..Default::default()
+                }),
+                Ok(job) => {
+                    let input_size = std::fs::metadata(&job.input)
+                        .map(|m| m.len())
+                        .unwrap_or(0);
+                    match compress_one(&job.input, &job.output, &job.format, opts.quality, opts.lossless) {
+                        Ok(output_size) => out.push(FileResult {
+                            input: job.input,
+                            output: Some(job.output),
+                            input_size,
+                            output_size: Some(output_size),
+                            ..Default::default()
+                        }),
+                        Err(e) => out.push(FileResult {
+                            input: job.input,
+                            output: Some(job.output),
+                            input_size,
+                            output_size: None,
+                            error: Some(e),
+                            ..Default::default()
+                        }),
+                    }
                 }
             }
+        }
+        done += 1;
+        if let Some(p) = progress {
+            (p.callback)(done);
         }
     }
     out
@@ -327,9 +338,9 @@ mod tests {
         image::codecs::png::PngEncoder::new(&mut file)
             .write_image(png.as_raw(), 8, 8, image::ExtendedColorType::Rgba8)
             .unwrap();
-        let mut cancel = std::sync::atomic::AtomicBool::new(false);
+        let cancel = std::sync::atomic::AtomicBool::new(false);
         let opts = CompressOptions { quality: 80, lossless: false, format: None };
-        let res = run_batch(&[img_path.clone()], &opts, Some(&cancel));
+        let res = run_batch(&[img_path.clone()], &opts, Some(&cancel), None);
         let r = &res[0];
         assert!(r.output.is_some(), "successful file must have output");
         assert!(r.error.is_none());
@@ -339,10 +350,10 @@ mod tests {
 
     #[test]
     fn run_batch_skips_remaining_after_cancel() {
-        let mut cancel = std::sync::atomic::AtomicBool::new(true);
+        let cancel = std::sync::atomic::AtomicBool::new(true);
         let opts = CompressOptions { quality: 80, lossless: false, format: Some("png".into()) };
         // cancel checked before touching files
-        let res = run_batch(&["a.png".into(), "b.png".into()], &opts, Some(&cancel));
+        let res = run_batch(&["a.png".into(), "b.png".into()], &opts, Some(&cancel), None);
         assert_eq!(res.len(), 2);
         assert!(res[1].error.is_some(), "second file skipped with cancel flag");
     }
