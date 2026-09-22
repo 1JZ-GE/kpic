@@ -1,13 +1,23 @@
 import QtQuick
+import QtQuick.Layouts
 
 Item {
     id: root
+    // fixed popup size: layout min==max==preferred; shell clamps the popup
+    // window to it, so the user cannot resize it
+    Layout.minimumWidth: 320
+    Layout.maximumWidth: 320
+    Layout.preferredWidth: 320
+    Layout.minimumHeight: 440
+    Layout.maximumHeight: 440
+    Layout.preferredHeight: 440
     // urls dropped on the compact icon while the popup was closed
     property var initialUrls: []
     // dbus client owned by main.qml; drives busy + progress signals
     property var kpicClient: null
     signal dropsConsumed
     signal compressRequested(var uris, int quality, bool lossless, string format)
+    signal cancelRequested
 
     onInitialUrlsChanged: {
         if (root.initialUrls.length) {
@@ -23,6 +33,7 @@ Item {
         onCompressRequested: {
             root.compressRequested(idle.uris, idle.quality, idle.lossless, idle.format)
         }
+        onCancelRequested: root.cancelRequested()
     }
 
     Connections {

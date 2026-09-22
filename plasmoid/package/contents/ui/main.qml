@@ -6,7 +6,7 @@ import org.kde.kirigami as Kirigami
 PlasmoidItem {
     id: root
     Layout.preferredWidth: 320
-    Layout.preferredHeight: 640
+    Layout.preferredHeight: 440
 
     // urls forwarded from a drop on the small panel icon
     property var pendingDrops: []
@@ -55,5 +55,6 @@ PlasmoidItem {
             starter.ensure()
             client.start(uris, quality, lossless, format)
         }
+        onCancelRequested: client.cancel()
     }
 }
